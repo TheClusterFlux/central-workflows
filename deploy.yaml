@@ -1,0 +1,56 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Docker
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      # Step 3: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 4: Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      # Step 5: Configure Kubernetes credentials
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v2
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      # Step 6: Build and push Docker image
+      - name: Build and push Docker image
+        run: |
+          FOLDER_NAME=$(basename "$PWD")
+          echo "Building Docker image for $FOLDER_NAME"
+          docker build -t keanuwatts/theclusterflux:$FOLDER_NAME .
+
+          echo "Pushing Docker image for $FOLDER_NAME"
+          docker push keanuwatts/theclusterflux:$FOLDER_NAME
+
+      # Step 7: Deploy to Kubernetes
+      - name: Deploy to Kubernetes
+        run: |
+          echo "Deploying $FOLDER_NAME to Kubernetes"
+          kubectl apply -f deployment.yaml
+          kubectl rollout restart deployment $FOLDER_NAME
