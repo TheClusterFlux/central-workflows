@@ -18,6 +18,17 @@ jobs:
       # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Verify Dockerfile and deployment.yaml
+        run: |
+          if [ ! -f Dockerfile ]; then
+            echo "Error: Dockerfile is missing in the root directory."
+            exit 1
+          fi
+          if [ ! -f deployment.yaml ]; then
+            echo "Error: deployment.yaml is missing in the root directory."
+            exit 1
+          fi
+          echo "Both Dockerfile and deployment.yaml are present."
 
       # Step 2: Set up Docker
       - name: Set up Docker
@@ -54,73 +65,9 @@ jobs:
           echo "Pushing Docker image for $REPO_NAME"
           docker push keanuwatts/theclusterflux:$REPO_NAME
 
-      # Step 7: Generate deployment.yaml dynamically
-      - name: Generate deployment.yaml
-        run: |
-          REPO_NAME=$(basename "$PWD")
-          cat <<EOF > deployment.yaml
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: $REPO_NAME
-          spec:
-            replicas: 1
-            selector:
-              matchLabels:
-                app: $REPO_NAME
-            template:
-              metadata:
-                labels:
-                  app: $REPO_NAME
-              spec:
-                containers:
-                  - name: $REPO_NAME
-                    image: docker.io/keanuwatts/theclusterflux:$REPO_NAME
-                    imagePullPolicy: Always
-                imagePullSecrets:
-                  - name: dockerhub-secret
-          ---
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: $REPO_NAME
-          spec:
-            selector:
-              app: $REPO_NAME
-            ports:
-              - protocol: TCP
-                port: 8080
-                targetPort: 8080
-          ---
-          apiVersion: networking.k8s.io/v1
-          kind: Ingress
-          metadata:
-            name: $REPO_NAME
-            namespace: default
-            annotations:
-              nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-          spec:
-            ingressClassName: nginx
-            tls:
-            - hosts:
-              - $REPO_NAME.theclusterflux.com
-              secretName: theclusterflux
-            rules:
-            - host: $REPO_NAME.theclusterflux.com
-              http:
-                paths:
-                - path: /
-                  pathType: Prefix
-                  backend:
-                    service:
-                      name: $REPO_NAME
-                      port:
-                        number: 8080
-          EOF
-
-      # Step 8: Deploy to Kubernetes
+      # Step 7: Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
           echo "Deploying to Kubernetes using dynamically generated deployment.yaml"
           kubectl apply -f deployment.yaml
-          kubectl rollout restart deployment $(basename "$PWD")
+          
