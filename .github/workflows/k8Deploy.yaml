@@ -3,10 +3,6 @@ name: Deploy to Kubernetes
 on:
   workflow_call: # Add this trigger to make the workflow reusable
     secrets:
-      DOCKER_USERNAME:
-        required: true
-      DOCKER_PASSWORD:
-        required: true
       KUBECONFIG:
         required: true
 
