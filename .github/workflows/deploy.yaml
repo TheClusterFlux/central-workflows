@@ -18,11 +18,11 @@ jobs:
       # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
-        
+
       - name: Verify Dockerfile and deployment.yaml
         run: |
           ls
-          if [ ! -f Dockerfile ]; then
+          if [ ! -f Dockerfile ] && [ ! -f dockerfile ]; then
             echo "Error: Dockerfile is missing in the root directory."
             exit 1
           fi
@@ -30,6 +30,7 @@ jobs:
             echo "Error: deployment.yaml is missing in the root directory."
             exit 1
           fi
+          echo "Required files are present: Dockerfile/dockerfile and deployment.yaml."
           echo "Both Dockerfile and deployment.yaml are present."
 
       # Step 2: Set up Docker
