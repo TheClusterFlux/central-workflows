@@ -18,8 +18,10 @@ jobs:
       # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
+        
       - name: Verify Dockerfile and deployment.yaml
         run: |
+          ls
           if [ ! -f Dockerfile ]; then
             echo "Error: Dockerfile is missing in the root directory."
             exit 1
