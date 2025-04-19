@@ -1,0 +1,59 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_call: # Add this trigger to make the workflow reusable
+    secrets:
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PASSWORD:
+        required: true
+      KUBECONFIG:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify deployment.yaml
+        run: |
+          ls
+          if [ ! -f deployment.yaml ]; then
+            echo "Error: deployment.yaml is missing in the root directory."
+            exit 1
+          fi
+          echo "Required files are present: deployment.yaml."
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v2
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          echo "Deploying to Kubernetes using dynamically generated deployment.yaml"
+          kubectl apply -f deployment.yaml
+
+          # Extract deployment names from deployment.yaml
+          DEPLOYMENT_NAMES=$(awk '/^kind: Deployment$/,/^metadata:/{if($1=="name:") print $2}' deployment.yaml)
+
+          if [ -z "$DEPLOYMENT_NAMES" ]; then
+            echo "No deployments found in deployment.yaml."
+            exit 1
+          fi
+
+          # Restart each deployment
+          for DEPLOYMENT in $DEPLOYMENT_NAMES; do
+            echo "Restarting deployment: $DEPLOYMENT"
+            kubectl rollout restart deployment "$DEPLOYMENT"
+          done
+          
