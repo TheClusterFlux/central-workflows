@@ -1,0 +1,38 @@
+name: Deploy Helm Chart to Kubernetes
+
+on:
+  workflow_call: # Makes the workflow reusable
+    secrets:
+      KUBECONFIG:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v2
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Deploy Helm Chart
+        run: |
+          echo "Deploying Helm chart to Kubernetes"
+          helm upgrade --install my-release ./chart-directory \
+            --namespace my-namespace \
+            --create-namespace \
+            --set key1=value1,key2=value2
