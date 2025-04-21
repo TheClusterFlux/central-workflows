@@ -65,18 +65,17 @@ jobs:
         run: |
           echo "Deploying to Kubernetes using dynamically generated deployment.yaml"
           kubectl apply -f deployment.yaml
-          
+      
           # Extract deployment names from deployment.yaml
-          DEPLOYMENT_NAMES=$(awk '/^kind: Deployment$/,/^metadata:/{if($1=="name:") print $2}' deployment.yaml)
-
+          DEPLOYMENT_NAMES=$(yq -r '. | select(.kind == "Deployment") | .metadata.name' deployment.yaml)
+      
           if [ -z "$DEPLOYMENT_NAMES" ]; then
             echo "No deployments found in deployment.yaml."
             exit 1
           fi
-
+      
           # Restart each deployment
           for DEPLOYMENT in $DEPLOYMENT_NAMES; do
             echo "Restarting deployment: $DEPLOYMENT"
             kubectl rollout restart deployment "$DEPLOYMENT"
           done
-          
